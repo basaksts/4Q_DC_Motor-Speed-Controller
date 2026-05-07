@@ -1,0 +1,5 @@
+../Core/Src/encoder_rpm.c:15:6:EncoderRPM_Init	1
+../Core/Src/encoder_rpm.c:26:6:EncoderRPM_OnPulse	1
+../Core/Src/encoder_rpm.c:44:6:EncoderRPM_Update	2
+../Core/Src/encoder_rpm.c:60:7:EncoderRPM_GetRPM	1
+../Core/Src/encoder_rpm.c:65:10:EncoderRPM_GetPulseCount	1
