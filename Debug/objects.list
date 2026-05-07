@@ -1,3 +1,4 @@
+"./Core/Src/adc_measure.o"
 "./Core/Src/control_loop.o"
 "./Core/Src/fault_safety.o"
 "./Core/Src/main.o"

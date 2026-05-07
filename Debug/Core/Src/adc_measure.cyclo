@@ -1,0 +1,4 @@
+../Core/Src/adc_measure.c:13:6:ADCMeasure_Init	1
+../Core/Src/adc_measure.c:25:10:ADCMeasure_ReadRawChannel	4
+../Core/Src/adc_measure.c:58:10:ADCMeasure_ReadPotRaw	1
+../Core/Src/adc_measure.c:69:7:ADCMeasure_GetPotPercent	1

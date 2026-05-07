@@ -21,7 +21,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "pwm_control.h"
+#include "control_loop.h"
 #include "uart_debug.h"
+#include "adc_measure.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -99,9 +102,32 @@ int main(void)
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
 
-  /* USER CODE BEGIN 2 */
   UART_Debug_Init(&huart1);
   UART_Debug_Print("UART debug started\r\n");
+
+  UART_Debug_Print("System started\r\n");
+
+  ADCMeasure_Init(&hadc1);
+  UART_Debug_Print("ADC measure initialized\r\n");
+
+  Motor_Init(&htim1, TIM_CHANNEL_1);
+  UART_Debug_Print("Motor PWM initialized\r\n");
+
+  Motor_Set_Speed(1200, MOTOR_CW);
+  UART_Debug_Print("Motor test: CW, duty=1200\r\n");
+  /*
+   * İlk test:
+   * Motoru CW yönde yaklaşık %33 duty ile sürüyoruz.
+   *
+   * TIM1 ARR = 3599
+   * duty = 1200 → yaklaşık %33
+   */
+  Motor_Set_Speed(1200, MOTOR_CW);
+
+  UART_Debug_Print("Motor test: CW, duty=1200\r\n");
+
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -114,6 +140,16 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
+	  //test1
+	  UART_Debug_Print("Motor running test...\r\n");
+	  HAL_Delay(1000);
+
+	  //test2
+	  float pot_percent = ADCMeasure_GetPotPercent();
+	  UART_Debug_PrintMotorData((uint8_t)pot_percent, 0, 1);
+	  HAL_Delay(500);
+
   }
   /* USER CODE END 3 */
 }
