@@ -1,0 +1,4 @@
+../Core/Src/control_loop.c:14:6:Control_Init	1
+../Core/Src/control_loop.c:22:6:Control_Set_Target	1
+../Core/Src/control_loop.c:29:6:Control_Update_Ramp	9
+../Core/Src/control_loop.c:57:6:Control_Run_4Q_Test	3

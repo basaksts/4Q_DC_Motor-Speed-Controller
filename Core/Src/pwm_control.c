@@ -1,44 +1,112 @@
 #include "pwm_control.h"
+#include "main.h"
 
-static TIM_HandleTypeDef *m_htim;
-static uint32_t m_channel;
+static TIM_HandleTypeDef *m_htim = NULL;
+static uint32_t m_channel = 0;
 
-void Motor_Init(TIM_HandleTypeDef *htim, uint32_t channel) {
+void Motor_Init(TIM_HandleTypeDef *htim, uint32_t channel)
+{
     m_htim = htim;
     m_channel = channel;
+
+    /*
+     * PWM çıkışını başlatıyoruz.
+     * Bu satır çalışmazsa PA8 pininden PWM çıkmaz.
+     */
     HAL_TIM_PWM_Start(m_htim, m_channel);
+
+    /*
+     * Güvenli başlangıç:
+     * PWM = 0
+     * IN1 = 0
+     * IN2 = 0
+     * Motor başlangıçta dönmez.
+     */
+    Motor_Emergency_Stop();
 }
 
-void Motor_Set_Speed(uint16_t duty, MotorDir_t dir) {
-    // %95 doluluk sınırı (Güvenlik için) [cite: 102]
-    if (duty > 950) duty = 950;
+void Motor_Set_Speed(uint16_t duty, MotorDir_t dir)
+{
+    if (m_htim == NULL) {
+        return;
+    }
+
+    /*
+     * Güvenlik için duty üst sınırı.
+     * TIM1 ARR = 3599 olduğundan 3420 yaklaşık %95 duty yapar.
+     */
+    if (duty > MOTOR_PWM_SAFE_MAX) {
+        duty = MOTOR_PWM_SAFE_MAX;
+    }
 
     if (dir == MOTOR_CW) {
-        // IN1: High, IN2: Low (L298 mantığı) [cite: 98]
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
-    } else if (dir == MOTOR_CCW) {
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_SET);
-    } else {
-        Motor_Emergency_Stop();
+        /*
+         * CW yön:
+         * IN1 = 1
+         * IN2 = 0
+         */
+        HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, GPIO_PIN_RESET);
     }
+    else if (dir == MOTOR_CCW) {
+        /*
+         * CCW yön:
+         * IN1 = 0
+         * IN2 = 1
+         */
+        HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, GPIO_PIN_SET);
+    }
+    else {
+        /*
+         * MOTOR_STOP veya bilinmeyen durum varsa motoru güvenli durdur.
+         */
+        Motor_Emergency_Stop();
+        return;
+    }
+
+    /*
+     * PWM duty değerini TIM1 CCR registerına yazıyoruz.
+     * L298N ENA pini PA8 üzerinden bu PWM'i alacak.
+     */
     __HAL_TIM_SET_COMPARE(m_htim, m_channel, duty);
 }
 
-void Motor_Emergency_Stop(void) {
-    __HAL_TIM_SET_COMPARE(m_htim, m_channel, 0);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
-}
-// Motoru Donanımsal Olarak Aktif Et
-void Motor_Enable(void) {
-    // Başak'ın belirleyeceği EN pinini HIGH yap
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_SET);
+void Motor_Emergency_Stop(void)
+{
+    if (m_htim != NULL) {
+        __HAL_TIM_SET_COMPARE(m_htim, m_channel, 0);
+    }
+
+    /*
+     * Coast / boşta duruş:
+     * IN1 = 0
+     * IN2 = 0
+     */
+    HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, GPIO_PIN_RESET);
 }
 
-// Motoru Donanımsal Olarak Devre Dışı Bırak
-void Motor_Disable(void) {
-    // EN pinini LOW yap
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
+void Motor_Coast(void)
+{
+    /*
+     * Motor uçları boşa alınır.
+     * L298N için IN1=0, IN2=0 ve PWM=0 güvenli coast durumudur.
+     */
+    Motor_Emergency_Stop();
+}
+
+void Motor_Brake(void)
+{
+    /*
+     * Frenleme:
+     * L298N'de IN1=1, IN2=1 motor uçlarını kısa devre frenlemeye yaklaştırır.
+     * PWM'i tam açmak yerine burada duty=0 bırakıyoruz; bunu deneyde gerekirse değiştiririz.
+     */
+    if (m_htim != NULL) {
+        __HAL_TIM_SET_COMPARE(m_htim, m_channel, 0);
+    }
+
+    HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, GPIO_PIN_SET);
 }
