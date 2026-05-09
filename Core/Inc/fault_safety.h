@@ -3,19 +3,14 @@
 
 #include "stm32f1xx_hal.h"
 
-// Başak'ın main.c dosyasındaki limitler
-#define CURRENT_LIMIT_A      1.00f  // Akım bu değeri geçerse kapat
-#define CURRENT_RECOVERY_A   0.85f  // Akım bu değerin altına düşerse tekrar aç
+// Akım sınırı tanımları
+#define CURRENT_LIMIT_THRESHOLD 1.0f    // 1 A kesme sınırı
+#define CURRENT_RECOVERY_LEVEL  0.85f   // Akım normale dönünce tekrar çalışma sınırı
+#define ADC_MAX_VALUE           4095.0f // 12-bit ADC
+#define SENSOR_SENSITIVITY      0.185f  // ACS712-5A için yaklaşık V/A
 
-// Hata Durumları
-typedef enum {
-    FAULT_NONE = 0,
-    FAULT_OVERCURRENT
-} FaultState_t;
+void Safety_Init(ADC_HandleTypeDef *hadc);
+void Safety_Process(void);
+float Get_Motor_Current(void);
 
-// Fonksiyonlar
-void Fault_Init(void);
-FaultState_t Fault_Check(float current_A); // Akımı kontrol eder ve durumu döner
-uint8_t Fault_Is_Active(void);             // Hata var mı yok mu?
-
-#endif
+#endif /* INC_FAULT_SAFETY_H_ */

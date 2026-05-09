@@ -1,0 +1,3 @@
+../Core/Src/uart_debug.c:15:6:UART_Debug_Init	1
+../Core/Src/uart_debug.c:20:6:UART_Debug_Print	3
+../Core/Src/uart_debug.c:30:6:UART_Debug_PrintMotorData	1

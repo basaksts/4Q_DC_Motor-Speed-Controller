@@ -1,0 +1,12 @@
+../Core/Src/adc_measure.c:14:6:ADCMeasure_Init	1
+../Core/Src/adc_measure.c:26:10:ADCMeasure_ReadRawChannel	4
+../Core/Src/adc_measure.c:59:10:ADCMeasure_ReadPotRaw	1
+../Core/Src/adc_measure.c:70:7:ADCMeasure_GetPotPercent	1
+../Core/Src/adc_measure.c:77:10:ADCMeasure_ReadCurrentRaw	1
+../Core/Src/adc_measure.c:82:6:ADCMeasure_CalibrateCurrentZero	2
+../Core/Src/adc_measure.c:96:7:ADCMeasure_GetMotorCurrentA	1
+../Core/Src/adc_measure.c:126:10:ADCMeasure_ReadVout1Raw	1
+../Core/Src/adc_measure.c:131:10:ADCMeasure_ReadVout2Raw	1
+../Core/Src/adc_measure.c:136:7:ADCMeasure_GetVout1Voltage	1
+../Core/Src/adc_measure.c:145:7:ADCMeasure_GetVout2Voltage	1
+../Core/Src/adc_measure.c:154:7:ADCMeasure_GetMotorVoltage	2
