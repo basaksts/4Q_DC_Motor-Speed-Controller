@@ -2,16 +2,20 @@
 #define INC_FAULT_SAFETY_H_
 
 #include "stm32f1xx_hal.h"
-#include "pwm_control.h"
 
-// Akım Sınırı Tanımları
-#define CURRENT_LIMIT_THRESHOLD 1.0f  // 1 Amper sınırı [cite: 16]
-#define ADC_MAX_VALUE           4095  // 12-bit ADC için
-#define SENSOR_SENSITIVITY      0.185f // ACS712-5A sensörü için tipik değer (V/A)
+// Başak'ın main.c dosyasındaki limitler
+#define CURRENT_LIMIT_A      1.00f  // Akım bu değeri geçerse kapat
+#define CURRENT_RECOVERY_A   0.85f  // Akım bu değerin altına düşerse tekrar aç
 
-// Fonksiyon Prototipleri
-void Safety_Init(ADC_HandleTypeDef *hadc);
-void Safety_Process(void);
-float Get_Motor_Current(void);
+// Hata Durumları
+typedef enum {
+    FAULT_NONE = 0,
+    FAULT_OVERCURRENT
+} FaultState_t;
+
+// Fonksiyonlar
+void Fault_Init(void);
+FaultState_t Fault_Check(float current_A); // Akımı kontrol eder ve durumu döner
+uint8_t Fault_Is_Active(void);             // Hata var mı yok mu?
 
 #endif

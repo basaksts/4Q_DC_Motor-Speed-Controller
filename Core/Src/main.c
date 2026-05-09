@@ -21,7 +21,12 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "pwm_control.h"
+#include "control_loop.h"
+#include "fault_safety.h"
+#include "uart_debug.h"
+#include "adc_measure.h"
+#include "encoder_rpm.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,7 +47,10 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+static uint8_t test_mode_enabled = 0;
+static GPIO_PinState last_button_state = GPIO_PIN_SET;
+static uint32_t last_button_time = 0;
+#define BUTTON_DEBOUNCE_MS 200
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -85,14 +93,62 @@ int main(void)
 
   /* Initialize all configured peripherals */
   /* USER CODE BEGIN 2 */
+  UART_Debug_Init(&huart1);
+    ADCMeasure_Init(&hadc1);
+    ADCMeasure_CalibrateCurrentZero(); // Akım sensörünü sıfırla
+    EncoderRPM_Init();
+    Motor_Init(&htim1, TIM_CHANNEL_1);
+    Control_Init();
+    Fault_Init();
 
+    UART_Debug_Print("Sistem Hazir, Motor Beklemede...\r\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-    /* USER CODE END WHILE */
+    while (1)
+      {
+        /* 1. Mod Değiştirme Butonu (PB12) */
+        GPIO_PinState current_button = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_12);
+        if (last_button_state == GPIO_PIN_SET && current_button == GPIO_PIN_RESET) {
+            if (HAL_GetTick() - last_button_time > BUTTON_DEBOUNCE_MS) {
+                test_mode_enabled = !test_mode_enabled;
+                last_button_time = HAL_GetTick();
+                Control_Init(); // Mod değişince hızları güvenliğe al
+                UART_Debug_Print(test_mode_enabled ? "Mod: 4Q Otomatik Test\r\n" : "Mod: Potansiyometre Kontrol\r\n");
+            }
+        }
+        last_button_state = current_button;
+
+        /* 2. Sensör Verilerini Al */
+        float motor_current = ADCMeasure_GetMotorCurrentA();
+        float pot_val = ADCMeasure_GetPotPercent();
+        EncoderRPM_Update();
+
+        /* 3. Akım Koruması ve Motor Kontrolü */
+        if (Fault_Check(motor_current) == FAULT_OVERCURRENT) {
+            Motor_Emergency_Stop(); // Akım yüksekse elektriği kes!
+        }
+        else {
+            if (test_mode_enabled) {
+                Control_Run_4Q_Test(1); // Otomatik ileri-geri modu
+            } else {
+                Control_Run_4Q_Test(0); // Normal mod
+                // Potansiyometreye göre hedef hızı belirle
+                uint16_t target_pwm = (uint16_t)((pot_val / 100.0f) * MOTOR_PWM_SAFE_MAX);
+                Control_Set_Target(target_pwm, MOTOR_CW);
+            }
+            Control_Update(); // Rampayı hesapla ve PWM'i uygula
+        }
+
+        /* 4. UART Ekranına Veri Bas (Her 100ms'de bir) */
+        static uint32_t debug_tick = 0;
+        if (HAL_GetTick() - debug_tick > 100) {
+            UART_Debug_PrintMotorData((uint8_t)pot_val, (uint16_t)EncoderRPM_GetRPM(), 1);
+            debug_tick = HAL_GetTick();
+        }
+
+        /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
@@ -136,7 +192,11 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+    if (GPIO_Pin == GPIO_PIN_1) { // PA1 Encoder Pini
+        EncoderRPM_OnPulse();
+    }
+}
 /* USER CODE END 4 */
 
 /**

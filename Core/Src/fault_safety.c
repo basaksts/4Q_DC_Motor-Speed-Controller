@@ -1,40 +1,28 @@
 #include "fault_safety.h"
+#include "uart_debug.h"
 
-static ADC_HandleTypeDef *m_hadc;
-static uint8_t is_fault_active = 0;
+static FaultState_t m_fault_state = FAULT_NONE;
 
-void Safety_Init(ADC_HandleTypeDef *hadc) {
-    m_hadc = hadc;
+void Fault_Init(void) {
+    m_fault_state = FAULT_NONE;
 }
 
-// Akımı Okuma ve Amper'e Dönüştürme
-float Get_Motor_Current(void) {
-    uint32_t adc_val = 0;
-    HAL_ADC_Start(m_hadc);
-    if (HAL_ADC_PollForConversion(m_hadc, 10) == HAL_OK) {
-        adc_val = HAL_ADC_GetValue(m_hadc);
+FaultState_t Fault_Check(float current_A) {
+    // Negatif akım (rejeneratif frenleme) durumunu da kapsamak için mutlak değer alıyoruz
+    float abs_current = (current_A < 0) ? -current_A : current_A;
+
+    if (m_fault_state == FAULT_NONE && (abs_current > CURRENT_LIMIT_A)) {
+        m_fault_state = FAULT_OVERCURRENT;
+        UART_Debug_Print("!!! FAULT: Overcurrent Detected !!!\r\n");
     }
-    HAL_ADC_Stop(m_hadc);
+    else if (m_fault_state == FAULT_OVERCURRENT && (abs_current < CURRENT_RECOVERY_A)) {
+        m_fault_state = FAULT_NONE;
+        UART_Debug_Print("Fault Cleared: Current is back to normal.\r\n");
+    }
 
-    // ADC değerini gerilime, gerilimi akıma dönüştürme (Hall Effect mantığı)
-    float voltage = (adc_val * 3.3f) / ADC_MAX_VALUE;
-    float current = (voltage - 2.5f) / SENSOR_SENSITIVITY; // 2.5V ofset ACS712 için örnektir
-
-    return (current < 0) ? -current : current; // Mutlak değer alıyoruz
+    return m_fault_state;
 }
 
-// Ana Güvenlik Döngüsü (Her döngüde çağrılmalı)
-void Safety_Process(void) {
-    float current_mA = Get_Motor_Current();
-
-    if (current_mA > CURRENT_LIMIT_THRESHOLD) {
-        // HATA: Akım 1A'i geçti! [cite: 17]
-        Motor_Emergency_Stop();
-        is_fault_active = 1;
-    }
-    else if (is_fault_active && (current_mA < CURRENT_LIMIT_THRESHOLD)) {
-        // NORMAL: Akım tekrar güvenli seviyede, otomatik dön
-        is_fault_active = 0;
-        // Motor son kaldığı hızda veya güvenli düşük hızda başlatılabilir
-    }
+uint8_t Fault_Is_Active(void) {
+    return (m_fault_state != FAULT_NONE);
 }
