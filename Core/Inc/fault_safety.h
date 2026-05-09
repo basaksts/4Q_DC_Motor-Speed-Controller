@@ -2,15 +2,19 @@
 #define INC_FAULT_SAFETY_H_
 
 #include "stm32f1xx_hal.h"
+#include <stdint.h>
 
-// Akım sınırı tanımları
-#define CURRENT_LIMIT_THRESHOLD 1.0f    // 1 A kesme sınırı
-#define CURRENT_RECOVERY_LEVEL  0.85f   // Akım normale dönünce tekrar çalışma sınırı
-#define ADC_MAX_VALUE           4095.0f // 12-bit ADC
-#define SENSOR_SENSITIVITY      0.185f  // ACS712-5A için yaklaşık V/A
+typedef enum
+{
+    FAULT_NONE = 0,
+    FAULT_OVERCURRENT
+} FaultState_t;
 
-void Safety_Init(ADC_HandleTypeDef *hadc);
-void Safety_Process(void);
-float Get_Motor_Current(void);
+#define FAULT_CURRENT_LIMIT_A     1.00f
+#define FAULT_CURRENT_RECOVERY_A  0.85f
+
+void Fault_Init(void);
+FaultState_t Fault_Check(float current_A);
+uint8_t Fault_Is_Active(void);
 
 #endif /* INC_FAULT_SAFETY_H_ */

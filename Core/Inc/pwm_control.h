@@ -5,16 +5,22 @@
 #include <stdint.h>
 
 /*
- * Bu modül L298N motor sürücü katını kontrol eder.
+ * Motor kontrol modülü
  *
- * Güncel pin planı:
- * PA8  -> L298N ENA / PWM
- * PB0  -> L298N IN1
- * PB1  -> L298N IN2
+ * Şu an geçici/test pin planı:
+ * PA8 -> PWM çıkışı
+ * PB0 -> yön kontrol pini 1
+ * PB1 -> yön kontrol pini 2
  *
  * Not:
- * PA8 PWM pini TIM1_CH1 tarafından sürülür.
- * PB0 ve PB1 GPIO output olarak yön kontrolünde kullanılır.
+ * Nihai sistemde BTS7960 / IBT-2 kullanılacak.
+ * BTS7960 için RPWM, LPWM, R_EN, L_EN pinleri motor netleşince
+ * yeniden eşlenecek.
+ *
+ * Bu dosyadaki fonksiyon isimleri genel tutulmuştur:
+ * Motor_Init()
+ * Motor_Set_Speed()
+ * Motor_Emergency_Stop()
  */
 
 #define MOTOR_PWM_MAX_DUTY   3599U

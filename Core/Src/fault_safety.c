@@ -3,19 +3,27 @@
 
 static FaultState_t m_fault_state = FAULT_NONE;
 
-void Fault_Init(void) {
+void Fault_Init(void)
+{
     m_fault_state = FAULT_NONE;
 }
 
-FaultState_t Fault_Check(float current_A) {
-    // Negatif akım (rejeneratif frenleme) durumunu da kapsamak için mutlak değer alıyoruz
-    float abs_current = (current_A < 0) ? -current_A : current_A;
+FaultState_t Fault_Check(float current_A)
+{
+    float abs_current = current_A;
 
-    if (m_fault_state == FAULT_NONE && (abs_current > CURRENT_LIMIT_A)) {
+    if (abs_current < 0.0f)
+    {
+        abs_current = -abs_current;
+    }
+
+    if ((m_fault_state == FAULT_NONE) && (abs_current > FAULT_CURRENT_LIMIT_A))
+    {
         m_fault_state = FAULT_OVERCURRENT;
         UART_Debug_Print("!!! FAULT: Overcurrent Detected !!!\r\n");
     }
-    else if (m_fault_state == FAULT_OVERCURRENT && (abs_current < CURRENT_RECOVERY_A)) {
+    else if ((m_fault_state == FAULT_OVERCURRENT) && (abs_current < FAULT_CURRENT_RECOVERY_A))
+    {
         m_fault_state = FAULT_NONE;
         UART_Debug_Print("Fault Cleared: Current is back to normal.\r\n");
     }
@@ -23,6 +31,7 @@ FaultState_t Fault_Check(float current_A) {
     return m_fault_state;
 }
 
-uint8_t Fault_Is_Active(void) {
+uint8_t Fault_Is_Active(void)
+{
     return (m_fault_state != FAULT_NONE);
 }

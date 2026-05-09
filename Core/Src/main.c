@@ -22,7 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "pwm_control.h"
-#include "control_loop.h"
+//#include "control_loop.h"
 #include "uart_debug.h"
 #include "adc_measure.h"
 #include "encoder_rpm.h"
@@ -169,16 +169,7 @@ int main(void)
 
   UART_Debug_Print("Normal mode started\r\n");
 
-  /*
-   * İlk test:
-   * Motoru CW yönde yaklaşık %33 duty ile sürüyoruz.
-   *
-   * TIM1 ARR = 3599
-   * duty = 1200 → yaklaşık %33
-   */
 
-
-  UART_Debug_Print("Motor test: CW, duty=1200\r\n");
 
 
 
@@ -419,11 +410,6 @@ int main(void)
 	    uint8_t dir_debug = (current_direction == MOTOR_CW) ? 1 : 2;
 	    UART_Debug_PrintMotorData((uint8_t)pot_percent, (uint16_t)motor_rpm, dir_debug);
 
-	    UART_Debug_PrintMotorData(
-	        (uint8_t)pot_percent,
-	        (uint16_t)motor_rpm,
-	        dir_debug
-	    );
 
 	    HAL_Delay(CONTROL_DELAY_MS);
 

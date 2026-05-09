@@ -66,8 +66,8 @@ void Motor_Set_Speed(uint16_t duty, MotorDir_t dir)
     }
 
     /*
-     * PWM duty değerini TIM1 CCR registerına yazıyoruz.
-     * L298N ENA pini PA8 üzerinden bu PWM'i alacak.
+     * PWM duty değerini timer compare registerına yazıyoruz.
+     * Şu an PA8 / TIM1_CH1 geçici PWM çıkışı olarak kullanılıyor.
      */
     __HAL_TIM_SET_COMPARE(m_htim, m_channel, duty);
 }
@@ -98,11 +98,10 @@ void Motor_Coast(void)
 
 void Motor_Brake(void)
 {
-    /*
-     * Frenleme:
-     * L298N'de IN1=1, IN2=1 motor uçlarını kısa devre frenlemeye yaklaştırır.
-     * PWM'i tam açmak yerine burada duty=0 bırakıyoruz; bunu deneyde gerekirse değiştiririz.
-     */
+	/*
+	 * Geçici frenleme mantığı.
+	 * Nihai BTS7960 bağlantısında fren/coast davranışı tekrar düzenlenecek.
+	 */
     if (m_htim != NULL) {
         __HAL_TIM_SET_COMPARE(m_htim, m_channel, 0);
     }
