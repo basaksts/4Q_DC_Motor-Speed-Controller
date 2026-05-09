@@ -2,7 +2,6 @@
 #define INC_FAULT_SAFETY_H_
 
 #include "stm32f1xx_hal.h"
-#include "pwm_control.h"
 
 // Akım sınırı tanımları
 #define CURRENT_LIMIT_THRESHOLD 1.0f    // 1 A kesme sınırı

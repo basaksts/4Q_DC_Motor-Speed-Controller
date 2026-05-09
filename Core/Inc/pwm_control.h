@@ -27,7 +27,11 @@ typedef enum {
 } MotorDir_t;
 
 void Motor_Init(TIM_HandleTypeDef *htim, uint32_t channel);
+
+// Verilen duty (0-3599) ve yöne göre motoru sürer.
 void Motor_Set_Speed(uint16_t duty, MotorDir_t dir);
+
+// Acil durumlarda (Overcurrent vb.) PWM'i anında keser ve pinleri RESET'e çeker.
 void Motor_Emergency_Stop(void);
 void Motor_Coast(void);
 void Motor_Brake(void);

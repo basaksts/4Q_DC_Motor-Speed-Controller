@@ -1,5 +1,5 @@
 #include "pwm_control.h"
-#include "main.h"
+#include "main.h" // Başak'ın IN1_Pin, IN2_Pin tanımlarını kullanmak için şart!
 
 static TIM_HandleTypeDef *m_htim = NULL;
 static uint32_t m_channel = 0;
