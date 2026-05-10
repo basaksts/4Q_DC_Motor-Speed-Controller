@@ -7,6 +7,7 @@
 
 
 #include "uart_debug.h"
+
 #include <stdio.h>
 #include <string.h>
 
@@ -36,6 +37,27 @@ void UART_Debug_PrintMotorData(int duty, int encoder_count, int direction)
              duty,
              encoder_count,
              direction);
+
+    UART_Debug_Print(buffer);
+}
+void UART_Debug_PrintSystemData(uint16_t pwm_percent,
+                                int16_t rpm,
+                                float current_A,
+                                const char *direction,
+                                const char *status)
+{
+    char buffer[100];
+
+    int16_t current_mA = (int16_t)(current_A * 1000.0f);
+
+    snprintf(buffer,
+             sizeof(buffer),
+             "PWM:%u%% | RPM:%d | I:%dmA | DIR:%s | STATUS:%s\r\n",
+             pwm_percent,
+             rpm,
+             current_mA,
+             direction,
+             status);
 
     UART_Debug_Print(buffer);
 }

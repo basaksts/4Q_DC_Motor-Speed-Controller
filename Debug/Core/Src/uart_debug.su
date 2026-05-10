@@ -1,3 +1,4 @@
-../Core/Src/uart_debug.c:15:6:UART_Debug_Init	16	static
-../Core/Src/uart_debug.c:20:6:UART_Debug_Print	24	static
-../Core/Src/uart_debug.c:30:6:UART_Debug_PrintMotorData	136	static
+../Core/Src/uart_debug.c:16:6:UART_Debug_Init	16	static
+../Core/Src/uart_debug.c:21:6:UART_Debug_Print	24	static
+../Core/Src/uart_debug.c:31:6:UART_Debug_PrintMotorData	136	static
+../Core/Src/uart_debug.c:43:6:UART_Debug_PrintSystemData	152	static

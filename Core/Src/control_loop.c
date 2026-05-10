@@ -5,7 +5,7 @@
 // Mevcut durum değişkenleri (Başak'ın değişken isimleriyle uyumlu hale getirildi)
 static uint16_t actual_duty = 0;
 static uint16_t target_duty = 0;
-static MotorDir_t current_direction = MOTOR_CW;
+static MotorDirection_t current_direction = MOTOR_CW;
 
 // Zamanlama ve State-Machine değişkenleri
 static uint32_t last_control_tick = 0;
@@ -21,7 +21,7 @@ void Control_Init(void) {
     last_control_tick = HAL_GetTick();
 }
 
-void Control_Set_Target(uint16_t duty, MotorDir_t dir) {
+void Control_Set_Target(uint16_t duty, MotorDirection_t dir) {
     // Normal moddayken hedefi doğrudan set eder
     target_duty = duty;
     current_direction = dir;

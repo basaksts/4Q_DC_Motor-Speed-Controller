@@ -1,5 +1,5 @@
-../Core/Src/pwm_control.c:7:6:Motor_Init	16	static
-../Core/Src/pwm_control.c:28:6:Motor_Set_Speed	16	static
-../Core/Src/pwm_control.c:75:6:Motor_Emergency_Stop	8	static
-../Core/Src/pwm_control.c:90:6:Motor_Coast	8	static
-../Core/Src/pwm_control.c:99:6:Motor_Brake	8	static
+../Core/Src/pwm_control.c:21:6:Motor_Init	24	static
+../Core/Src/pwm_control.c:41:6:Motor_Set_Speed	16	static
+../Core/Src/pwm_control.c:86:6:Motor_Emergency_Stop	8	static
+../Core/Src/pwm_control.c:102:6:Motor_Coast	8	static
+../Core/Src/pwm_control.c:117:6:Motor_Brake	8	static

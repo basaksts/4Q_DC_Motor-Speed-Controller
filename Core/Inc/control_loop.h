@@ -25,7 +25,7 @@ void Control_Init(void);
 /* * Motorun gitmesini istediğimiz hedef değerleri ayarlar.
  * Bu değerlere rampa ile yavaşça çıkılır.
  */
-void Control_Set_Target(uint16_t target_duty, MotorDir_t target_dir);
+void Control_Set_Target(uint16_t target_duty, MotorDirection_t target_dir);
 
 /* * Her 20ms'de bir çağrılmalı.
  * Mevcut hızı hedefe yaklaştırır ve motoru sürer.
