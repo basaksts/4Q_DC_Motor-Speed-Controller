@@ -1,0 +1,2 @@
+../Core/Src/oled_app.c:13:6:OLED_App_Init	16	static
+../Core/Src/oled_app.c:37:6:OLED_App_UpdateMainScreen	24	static

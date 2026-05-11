@@ -30,6 +30,7 @@
 #include "adc_measure.h"
 #include "encoder_rpm.h"
 #include "fault_safety.h"
+#include "oled_app.h"
 
 
 /* USER CODE END Includes */
@@ -75,6 +76,10 @@ static uint32_t last_direction_change_ms = 0;
 
 static GPIO_PinState last_button_state = GPIO_PIN_SET;
 static uint32_t last_button_time_ms = 0;
+
+static GPIO_PinState last_estop_button_state = GPIO_PIN_SET;
+static uint32_t last_estop_button_time_ms = 0;
+static uint8_t emergency_stop_latched = 0;
 
 uint16_t display_pwm_percent = 0;
 int16_t display_rpm = 0;
@@ -131,13 +136,18 @@ static void Update_Display_Data(uint16_t duty,
                                 float rpm,
                                 float current_A,
                                 MotorDirection_t direction,
-                                uint8_t fault_active)
+                                uint8_t fault_active,
+                                uint8_t estop_active)
 {
     display_pwm_percent = (uint16_t)((duty * 100U) / MOTOR_PWM_MAX_DUTY);
     display_rpm = (int16_t)rpm;
     display_current_A = current_A;
 
-    if (fault_active)
+    if (estop_active)
+    {
+        snprintf(display_status, sizeof(display_status), "ESTOP");
+    }
+    else if (fault_active)
     {
         snprintf(display_status, sizeof(display_status), "FAULT");
     }
@@ -276,6 +286,9 @@ int main(void)
   Fault_Init();
   UART_Debug_Print("Fault safety initialized\r\n");
 
+  OLED_App_Init(&hi2c1);
+  UART_Debug_Print("OLED app initialized\r\n");
+
   //motoru sabit duty ile sürmek için:
   // Motor_Set_Speed(1200, MOTOR_CW);
   //UART_Debug_Print("Motor test: CW, duty=1200\r\n");
@@ -362,6 +375,47 @@ int main(void)
 
 	  last_button_state = button_state;
 
+	  /*
+	   * PB13 emergency stop butonu:
+	   * Pull-up kullanıldığı için butona basınca pin RESET okunur.
+	   * Her basışta emergency stop aktif/pasif olur.
+	   */
+	  GPIO_PinState estop_button_state = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_13);
+
+	  if ((last_estop_button_state == GPIO_PIN_SET) &&
+	      (estop_button_state == GPIO_PIN_RESET))
+	  {
+	      uint32_t now = HAL_GetTick();
+
+	      if ((now - last_estop_button_time_ms) > BUTTON_DEBOUNCE_MS)
+	      {
+	          last_estop_button_time_ms = now;
+
+	          emergency_stop_latched = !emergency_stop_latched;
+
+	          actual_duty = 0;
+	          target_duty = 0;
+	          requested_duty = 0;
+
+	          test_state = TEST_STATE_RUN;
+	          current_direction = MOTOR_CW;
+	          last_direction_change_ms = HAL_GetTick();
+
+	          Motor_Emergency_Stop();
+
+	          if (emergency_stop_latched)
+	          {
+	              UART_Debug_Print("EMERGENCY STOP ACTIVE\r\n");
+	          }
+	          else
+	          {
+	              UART_Debug_Print("EMERGENCY STOP CLEARED\r\n");
+	          }
+	      }
+	  }
+
+	  last_estop_button_state = estop_button_state;
+
 
 	  float pot_percent = 0.0f;
 	  float motor_current_A = 0.0f;
@@ -425,7 +479,7 @@ int main(void)
 
 
 
-	  if (!overcurrent_fault)
+	  if (!overcurrent_fault && !emergency_stop_latched)
 	  {
 	      /*
 	       * Potansiyometreden istenen duty hesaplanır.
@@ -532,7 +586,7 @@ int main(void)
 
 	    //Eğer fault aktifse ramp veya test state-machine yanlışlıkla
 	    //duty üretse bile motor kesinlikle sürülmesin.
-	    if (!overcurrent_fault)
+	    if (!overcurrent_fault && !emergency_stop_latched)
 	    {
 	        Motor_Set_Speed(actual_duty, current_direction);
 	    }
@@ -545,7 +599,8 @@ int main(void)
 	                        motor_rpm,
 	                        motor_current_A,
 	                        current_direction,
-							overcurrent_fault);
+	                        overcurrent_fault,
+	                        emergency_stop_latched);
 
 	    if ((HAL_GetTick() - last_debug_ms) >= DEBUG_PERIOD_MS)
 	    {
@@ -556,6 +611,12 @@ int main(void)
 	                                   display_current_A,
 	                                   display_direction,
 	                                   display_status);
+
+	        OLED_App_UpdateMainScreen(display_pwm_percent,
+	                                  display_rpm,
+	                                  display_current_A,
+	                                  display_direction,
+	                                  display_status);
 	    }
 
 
@@ -816,17 +877,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PB12 */
-  GPIO_InitStruct.Pin = GPIO_PIN_12;
+  /*Configure GPIO pins : PB12 PB13 */
+  GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PA8 */
-  GPIO_InitStruct.Pin = GPIO_PIN_8;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);

@@ -1,4 +1,4 @@
-Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
+Core/Src/oled_app.o: ../Core/Src/oled_app.c ../Core/Inc/oled_app.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h \
  ../Core/Inc/stm32f1xx_hal_conf.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_rcc.h \
@@ -27,10 +27,8 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h \
- ../Core/Inc/pwm_control.h ../Core/Inc/uart_debug.h ../Core/Inc/main.h \
- ../Core/Inc/adc_measure.h ../Core/Inc/encoder_rpm.h \
- ../Core/Inc/fault_safety.h ../Core/Inc/oled_app.h
-../Core/Inc/main.h:
+ ../Core/Inc/oled_ssd1306.h
+../Core/Inc/oled_app.h:
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h:
 ../Core/Inc/stm32f1xx_hal_conf.h:
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_rcc.h:
@@ -59,10 +57,4 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h:
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h:
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h:
-../Core/Inc/pwm_control.h:
-../Core/Inc/uart_debug.h:
-../Core/Inc/main.h:
-../Core/Inc/adc_measure.h:
-../Core/Inc/encoder_rpm.h:
-../Core/Inc/fault_safety.h:
-../Core/Inc/oled_app.h:
+../Core/Inc/oled_ssd1306.h:
