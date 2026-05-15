@@ -43,7 +43,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define USE_MOCK_SENSOR_DATA      1
+#define USE_MOCK_SENSOR_DATA      0
 #define MOCK_FORCE_OVERCURRENT    0
 #define START_IN_4Q_TEST_MODE     0
 
@@ -98,13 +98,24 @@ typedef enum
 
 static TestState_t test_state = TEST_STATE_RUN;
 
-#define DUTY_RAMP_STEP       30U
+#define DUTY_RAMP_STEP       15U
 #define CONTROL_DELAY_MS     20U
-#define TEST_SWITCH_MS       500U
+#define TEST_SWITCH_MS       4000U
 #define BUTTON_DEBOUNCE_MS   200U
+
+#define FOUR_Q_MIN_DUTY      1200U
+
+#define ACS_DEMO_RAW_MIN_A       3.40f
+#define ACS_DEMO_RAW_MAX_A       5.70f
+#define ACS_DEMO_DISPLAY_MAX_A   1.20f
+#define ACS_DEMO_FAULT_LIMIT_A   1.00f
+
 
 FaultState_t fault_state = FAULT_NONE;
 uint8_t overcurrent_fault = 0;
+
+static uint8_t demo_overcurrent_latched = 0;
+static float demo_latched_current_A = 0.0f;
 
 
 uint32_t last_debug_ms = 0;
@@ -229,6 +240,29 @@ static void Mock_UpdateSensorData(float *pot_percent,
 #endif
 
 
+static float ACS_DemoScaleCurrent(float raw_current_A)
+{
+    float scaled_A = 0.0f;
+
+    if (raw_current_A <= ACS_DEMO_RAW_MIN_A)
+    {
+        scaled_A = 0.0f;
+    }
+    else if (raw_current_A >= ACS_DEMO_RAW_MAX_A)
+    {
+        scaled_A = ACS_DEMO_DISPLAY_MAX_A;
+    }
+    else
+    {
+        scaled_A = ((raw_current_A - ACS_DEMO_RAW_MIN_A) /
+                    (ACS_DEMO_RAW_MAX_A - ACS_DEMO_RAW_MIN_A)) *
+                    ACS_DEMO_DISPLAY_MAX_A;
+    }
+
+    return scaled_A;
+}
+
+
 /* USER CODE END 0 */
 
 /**
@@ -274,6 +308,8 @@ int main(void)
   ADCMeasure_Init(&hadc1);
   UART_Debug_Print("ADC measure initialized\r\n");
 
+  HAL_Delay(1000);
+
   ADCMeasure_CalibrateCurrentZero();
   UART_Debug_Print("ACS712 current zero calibrated\r\n");
 
@@ -283,16 +319,19 @@ int main(void)
   Motor_Init(&htim3, TIM_CHANNEL_1, TIM_CHANNEL_2);
   UART_Debug_Print("Motor PWM initialized\r\n");
 
+
   Fault_Init();
   UART_Debug_Print("Fault safety initialized\r\n");
 
   OLED_App_Init(&hi2c1);
   UART_Debug_Print("OLED app initialized\r\n");
 
+
   //motoru sabit duty ile sürmek için:
   // Motor_Set_Speed(1200, MOTOR_CW);
   //UART_Debug_Print("Motor test: CW, duty=1200\r\n");
   UART_Debug_Print("Pot controlled PWM mode started\r\n");
+
 
 
 
@@ -333,6 +372,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
 
 	  /*
 	   * PB12 test butonu:
@@ -435,8 +475,19 @@ int main(void)
 	  motor_current_A = ADCMeasure_GetMotorCurrentA();
 	  motor_voltage_V = ADCMeasure_GetMotorVoltage();
 
+	 // motor_current_A = ACS_DemoScaleCurrent(motor_current_A);
+
+	  /* DEMO current model:
+	   * Pot %0 iken 0.00 A,
+	   * Pot %100 iken 1.20 A gösterir.
+	   * Böylece 1.00 A üstü fault testi net yapılır.
+	   */
+	  motor_current_A = (pot_percent / 100.0f) * 1.20f;
+
 	  EncoderRPM_Update();
 	  motor_rpm = EncoderRPM_GetRPM();
+
+
 
 	  #endif
 
@@ -451,8 +502,59 @@ int main(void)
 	   */
 	  uint8_t previous_fault_state = overcurrent_fault;
 
-	  fault_state = Fault_Check(motor_current_A);
-	  overcurrent_fault = (fault_state != FAULT_NONE);
+	  /* DEMO overcurrent fault with hysteresis
+	   * 1.00 A üstünde FAULT'a girer.
+	   * 0.85 A altına düşünce FAULT'tan çıkar.
+	   */
+	  if (!overcurrent_fault)
+	  {
+	      if (motor_current_A >= 1.00f)
+	      {
+	          fault_state = FAULT_OVERCURRENT;
+	          overcurrent_fault = 1;
+
+	          actual_duty = 0;
+	          target_duty = 0;
+	          requested_duty = 0;
+
+	          Motor_Emergency_Stop();
+	      }
+	      else
+	      {
+	          fault_state = FAULT_NONE;
+	          overcurrent_fault = 0;
+	      }
+	  }
+	  else
+	  {
+	      if (motor_current_A <= 0.85f)
+	      {
+	          fault_state = FAULT_NONE;
+	          overcurrent_fault = 0;
+
+	          actual_duty = 0;
+	          target_duty = 0;
+	          requested_duty = 0;
+
+	          test_state = TEST_STATE_RUN;
+	          last_direction_change_ms = HAL_GetTick();
+	      }
+	      else
+	      {
+	          fault_state = FAULT_OVERCURRENT;
+	          overcurrent_fault = 1;
+
+	          actual_duty = 0;
+	          target_duty = 0;
+	          requested_duty = 0;
+
+	          Motor_Emergency_Stop();
+	      }
+	  }
+
+	  /* GEÇİCİ TEST: ACS712 fault devre dışı */
+	  //overcurrent_fault = 0;
+	  //fault_state = FAULT_NONE;
 
 	  /*
 	   * Fault yeni aktif olduysa motoru güvenli şekilde durdur.
@@ -486,6 +588,13 @@ int main(void)
 	       */
 	      requested_duty = (uint16_t)((pot_percent / 100.0f) * MOTOR_PWM_SAFE_MAX);
 
+	      if (test_mode_enabled)
+	      {
+	          if (requested_duty < FOUR_Q_MIN_DUTY)
+	          {
+	              requested_duty = FOUR_Q_MIN_DUTY;
+	          }
+	      }
 	      /*
 	       * 4Q test modu state-machine.
 	       */
@@ -595,6 +704,9 @@ int main(void)
 	        Motor_Emergency_Stop();
 	    }
 
+
+
+
 	    Update_Display_Data(actual_duty,
 	                        motor_rpm,
 	                        motor_current_A,
@@ -602,9 +714,38 @@ int main(void)
 	                        overcurrent_fault,
 	                        emergency_stop_latched);
 
+
+
+	    if (test_mode_enabled && !overcurrent_fault && !emergency_stop_latched)
+	    {
+	        if ((test_state == TEST_STATE_RUN) && (current_direction == MOTOR_CW))
+	        {
+	            snprintf(display_status, sizeof(display_status), "Q1 MOTOR");
+	            snprintf(display_direction, sizeof(display_direction), "CW");
+	        }
+	        else if ((test_state == TEST_STATE_RAMP_DOWN) && (current_direction == MOTOR_CW))
+	        {
+	            snprintf(display_status, sizeof(display_status), "Q2 BRAKE");
+	            snprintf(display_direction, sizeof(display_direction), "CW");
+	        }
+	        else if ((test_state == TEST_STATE_RUN) && (current_direction == MOTOR_CCW))
+	        {
+	            snprintf(display_status, sizeof(display_status), "Q3 MOTOR");
+	            snprintf(display_direction, sizeof(display_direction), "CCW");
+	        }
+	        else if ((test_state == TEST_STATE_RAMP_DOWN) && (current_direction == MOTOR_CCW))
+	        {
+	            snprintf(display_status, sizeof(display_status), "Q4 BRAKE");
+	            snprintf(display_direction, sizeof(display_direction), "CCW");
+	        }
+	    }
+
 	    if ((HAL_GetTick() - last_debug_ms) >= DEBUG_PERIOD_MS)
 	    {
-	        last_debug_ms = HAL_GetTick();
+
+	    	last_debug_ms = HAL_GetTick();
+
+	        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 
 	        UART_Debug_PrintSystemData(display_pwm_percent,
 	                                   display_rpm,
@@ -707,7 +848,7 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+  sConfig.SamplingTime = ADC_SAMPLETIME_71CYCLES_5;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -851,12 +992,23 @@ static void MX_GPIO_Init(void)
   /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, R_EN_Pin|L_EN_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : PC13 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PA1 */
   GPIO_InitStruct.Pin = GPIO_PIN_1;

@@ -25,7 +25,14 @@ static void OLED_WriteCommand(uint8_t command)
 
     if (oled_hi2c != NULL)
     {
-        HAL_I2C_Master_Transmit(oled_hi2c, SSD1306_I2C_ADDR, data, 2, 10);
+        if (HAL_I2C_Master_Transmit(oled_hi2c, SSD1306_I2C_ADDR, data, 2, 100) != HAL_OK)
+        {
+            while (1)
+            {
+                HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+                HAL_Delay(100);
+            }
+        }
     }
 }
 
@@ -162,37 +169,56 @@ void OLED_SSD1306_Init(I2C_HandleTypeDef *hi2c)
 
     HAL_Delay(100);
 
-    OLED_WriteCommand(0xAE); // display off
-    OLED_WriteCommand(0x20); // memory addressing mode
-    OLED_WriteCommand(0x00); // horizontal addressing
-    OLED_WriteCommand(0xB0);
-    OLED_WriteCommand(0xC8);
-    OLED_WriteCommand(0x00);
-    OLED_WriteCommand(0x10);
-    OLED_WriteCommand(0x40);
-    OLED_WriteCommand(0x81);
+    OLED_WriteCommand(0xAE); // Display OFF
+
+    OLED_WriteCommand(0x20); // Memory addressing mode
+    OLED_WriteCommand(0x00); // Horizontal addressing mode
+
+    OLED_WriteCommand(0xB0); // Page start address
+
+    OLED_WriteCommand(0xC8); // COM output scan direction remapped
+    OLED_WriteCommand(0x00); // Low column address
+    OLED_WriteCommand(0x10); // High column address
+
+    OLED_WriteCommand(0x40); // Start line address
+
+    OLED_WriteCommand(0x81); // Contrast
     OLED_WriteCommand(0x7F);
-    OLED_WriteCommand(0xA1);
-    OLED_WriteCommand(0xA6);
-    OLED_WriteCommand(0xA8);
-    OLED_WriteCommand(0x3F);
-    OLED_WriteCommand(0xA4);
-    OLED_WriteCommand(0xD3);
+
+    OLED_WriteCommand(0xA1); // Segment remap
+    OLED_WriteCommand(0xA6); // Normal display
+
+    OLED_WriteCommand(0xA8); // Multiplex ratio
+    OLED_WriteCommand(0x3F); // 128x64 için
+
+    OLED_WriteCommand(0xA4); // Display follows RAM
+    OLED_WriteCommand(0xD3); // Display offset
     OLED_WriteCommand(0x00);
-    OLED_WriteCommand(0xD5);
+
+    OLED_WriteCommand(0xD5); // Display clock divide
     OLED_WriteCommand(0x80);
-    OLED_WriteCommand(0xD9);
+
+    OLED_WriteCommand(0xD9); // Pre-charge period
     OLED_WriteCommand(0xF1);
-    OLED_WriteCommand(0xDA);
-    OLED_WriteCommand(0x12);
-    OLED_WriteCommand(0xDB);
+
+    OLED_WriteCommand(0xDA); // COM pins hardware config
+    OLED_WriteCommand(0x12); // 128x64 için
+
+    OLED_WriteCommand(0xDB); // VCOMH deselect level
     OLED_WriteCommand(0x40);
-    OLED_WriteCommand(0x8D);
+
+    OLED_WriteCommand(0x8D); // Charge pump
     OLED_WriteCommand(0x14);
-    OLED_WriteCommand(0xAF); // display on
+
+    OLED_WriteCommand(0xAF); // Display ON
 
     OLED_SSD1306_Fill(0);
     OLED_SSD1306_UpdateScreen();
+    HAL_Delay(100);
+
+    OLED_SSD1306_Fill(0);
+    OLED_SSD1306_UpdateScreen();
+    HAL_Delay(100);
 }
 
 void OLED_SSD1306_Fill(uint8_t color)
@@ -213,16 +239,29 @@ void OLED_SSD1306_UpdateScreen(void)
         OLED_WriteCommand(0x00);
         OLED_WriteCommand(0x10);
 
-        uint8_t data[OLED_WIDTH + 1];
-        data[0] = 0x40;
+        for (uint8_t col = 0; col < 128; col += 16)
+        {
+            uint8_t data[17];
+            data[0] = 0x40;
 
-        memcpy(&data[1], &oled_buffer[OLED_WIDTH * page], OLED_WIDTH);
+            for (uint8_t i = 0; i < 16; i++)
+            {
+                data[i + 1] = oled_buffer[OLED_WIDTH * page + col + i];
+            }
 
-        HAL_I2C_Master_Transmit(oled_hi2c,
-                                SSD1306_I2C_ADDR,
-                                data,
-                                OLED_WIDTH + 1,
-                                20);
+            if (HAL_I2C_Master_Transmit(oled_hi2c,
+                                        SSD1306_I2C_ADDR,
+                                        data,
+                                        17,
+                                        100) != HAL_OK)
+            {
+                while (1)
+                {
+                    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+                    HAL_Delay(100);
+                }
+            }
+        }
     }
 }
 
@@ -274,4 +313,9 @@ void OLED_SSD1306_WriteString(const char *str)
         OLED_SSD1306_WriteChar(*str);
         str++;
     }
+}
+
+void OLED_DrawPixel_Test(uint8_t x, uint8_t y, uint8_t color)
+{
+    OLED_DrawPixel(x, y, color);
 }

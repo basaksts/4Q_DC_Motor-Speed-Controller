@@ -14,7 +14,7 @@
  * OLED ekran fiziksel olarak bağlı değilken 0 yapılabilir.
  * OLED bağlıyken 1 yap.
  */
-#define OLED_APP_ENABLED  0
+#define OLED_APP_ENABLED  1
 
 void OLED_App_Init(I2C_HandleTypeDef *hi2c);
 void OLED_App_UpdateMainScreen(uint16_t pwm_percent,

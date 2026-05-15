@@ -52,6 +52,12 @@ default.size.stdout \
 OBJDUMP_LIST += \
 4Q_DC_Motor-Speed-Controller.list \
 
+OBJCOPY_HEX += \
+4Q_DC_Motor-Speed-Controller.hex \
+
+OBJCOPY_BIN += \
+4Q_DC_Motor-Speed-Controller.bin \
+
 
 # All Target
 all: main-build
@@ -75,12 +81,22 @@ default.size.stdout: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	@echo 'Finished building: $@'
 	@echo ' '
 
+4Q_DC_Motor-Speed-Controller.hex: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objcopy  -O ihex $(EXECUTABLES) "4Q_DC_Motor-Speed-Controller.hex"
+	@echo 'Finished building: $@'
+	@echo ' '
+
+4Q_DC_Motor-Speed-Controller.bin: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objcopy  -O binary $(EXECUTABLES) "4Q_DC_Motor-Speed-Controller.bin"
+	@echo 'Finished building: $@'
+	@echo ' '
+
 # Other Targets
 clean:
-	-$(RM) 4Q_DC_Motor-Speed-Controller.elf 4Q_DC_Motor-Speed-Controller.list 4Q_DC_Motor-Speed-Controller.map default.size.stdout
+	-$(RM) 4Q_DC_Motor-Speed-Controller.bin 4Q_DC_Motor-Speed-Controller.elf 4Q_DC_Motor-Speed-Controller.hex 4Q_DC_Motor-Speed-Controller.list 4Q_DC_Motor-Speed-Controller.map default.size.stdout
 	-@echo ' '
 
-secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST)
+secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST) $(OBJCOPY_HEX) $(OBJCOPY_BIN)
 
 fail-specified-linker-script-missing:
 	@echo 'Error: Cannot find the specified linker script. Check the linker settings in the build configuration.'

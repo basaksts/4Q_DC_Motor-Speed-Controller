@@ -20,5 +20,6 @@ void OLED_SSD1306_UpdateScreen(void);
 void OLED_SSD1306_SetCursor(uint8_t x, uint8_t y);
 void OLED_SSD1306_WriteString(const char *str);
 void OLED_SSD1306_WriteChar(char ch);
+void OLED_DrawPixel_Test(uint8_t x, uint8_t y, uint8_t color);
 
 #endif /* INC_OLED_SSD1306_H_ */

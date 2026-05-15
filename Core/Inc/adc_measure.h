@@ -26,7 +26,7 @@
 #define MOTOR_VOLTAGE_DIVIDER_GAIN  5.7f
 
 #define ACS712_SENSITIVITY_V_PER_A   0.185f
-#define ACS712_ADC_DIVIDER_GAIN      1.5f
+#define ACS712_ADC_DIVIDER_GAIN      1.0f
 
 void ADCMeasure_Init(ADC_HandleTypeDef *hadc);
 

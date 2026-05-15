@@ -120,6 +120,24 @@ float ADCMeasure_GetMotorCurrentA(void)
      */
     float current_A = sensor_voltage_diff / ACS712_SENSITIVITY_V_PER_A;
 
+    /* Akım yönü bizim için önemli değil; koruma için mutlak değer kullanıyoruz */
+    if (current_A < 0.0f)
+    {
+        current_A = -current_A;
+    }
+
+    /* ACS712 gürültüsü / küçük offset sapmaları */
+    if (current_A < 0.10f)
+    {
+        current_A = 0.0f;
+    }
+
+    /* Saçma yüksek okuma varsa demo sırasında sistemi bozmasın */
+    if (current_A > 10.0f)
+    {
+        current_A = 0.0f;
+    }
+
     return current_A;
 }
 
